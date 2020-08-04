@@ -1322,7 +1322,7 @@ interface_receive(int ifno)
 						interface[ifno].counter.rx_expire++;
 					} else {
 						ts_delta = curtime;
-						timespecsub(&ts_delta, &seqrecord->ts);
+						timespecsub(&ts_delta, &seqrecord->ts, &ts_delta);
 						ts_delta.tv_sec &= 0xff;
 						latency = ts_delta.tv_sec / 1000 + ts_delta.tv_nsec / 1000000.0;
 
