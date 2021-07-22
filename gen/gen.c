@@ -70,6 +70,7 @@
 
 #define	LINKSPEED_1GBPS		1000000000ULL
 #define	LINKSPEED_10GBPS	10000000000ULL
+#define	LINKSPEED_100GBPS	100000000000ULL
 
 #define	DEFAULT_IFG		12	/* Inter Packet Gap */
 #define	DEFAULT_PREAMBLE	(7 + 1)	/* preamble + SFD */
@@ -325,6 +326,9 @@ struct ifflag {
 	{"igb", LINKSPEED_1GBPS},
 	{"bge", LINKSPEED_1GBPS},
 	{"ix",  LINKSPEED_10GBPS},
+	{"cc",	LINKSPEED_100GBPS},
+	{"ice",	LINKSPEED_100GBPS},
+	{"mce",	LINKSPEED_100GBPS},
 };
 
 struct timespec currenttime_tx;
@@ -2259,7 +2263,9 @@ rfc2544_showresult(void)
 		if (tmp < mbps)
 			tmp = mbps;
 	}
-	if (tmp > 1000.0)
+	if (tmp > 10000.0)
+		linkspeed = 100; /* 100G */
+	else if (tmp > 1000.0)
 		linkspeed = 10;	/* 10G */
 	else
 		linkspeed = 1;	/* 1G */
@@ -2272,7 +2278,9 @@ rfc2544_showresult(void)
 	printf("rfc2544 pps resolution: %.4f%%\n", opt_rfc2544_ppsresolution);
 	printf("\n");
 
-	if (linkspeed == 10)
+	if (linkspeed == 100)
+		printf("framesize|0G  10G  20G  30G  40G  50G  60G  70G  80G  90G  100Gbps\n");
+	else if (linkspeed == 10)
 		printf("framesize|0G  1G   2G   3G   4G   5G   6G   7G   8G   9G   10Gbps\n");
 	else
 		printf("framesize|0M  100M 200M 300M 400M 500M 600M 700M 800M 900M 1Gbps\n");
@@ -2287,14 +2295,18 @@ rfc2544_showresult(void)
 		for (; j < 51; j++)
 			printf(" ");
 
-		if (linkspeed == 10)
+		if (linkspeed == 100)
+			printf("%9.2fMbps, %9u/%9upps\n", mbps, rfc2544_work[i].curpps, rfc2544_work[i].limitpps);
+		else if (linkspeed == 10)
 			printf("%8.2fMbps, %8u/%8upps\n", mbps, rfc2544_work[i].curpps, rfc2544_work[i].limitpps);
 		else
 			printf("%7.2fMbps, %7u/%7upps\n", mbps, rfc2544_work[i].curpps, rfc2544_work[i].limitpps);
 	}
 	printf("\n");
 
-	if (linkspeed == 10)
+	if (linkspeed == 100)
+		printf("framesize|0   |10m |20m |30m |40m |50m |60m |70m |80m |90m |100m|110m|120m|130m|140m|150m pps\n");
+	else if (linkspeed == 10)
 		printf("framesize|0   |1m  |2m  |3m  |4m  |5m  |6m  |7m  |8m  |9m  |10m |11m |12m |13m |14m |15m pps\n");
 	else
 		printf("framesize|0   |100k|200k|300k|400k|500k|600k|700k|800k|900k|1.0m|1.1m|1.2m|1.3m|1.4m|1.5m pps\n");
@@ -2308,7 +2320,10 @@ rfc2544_showresult(void)
 		for (; j < 75; j++)
 			printf(" ");
 
-		if (linkspeed == 10)
+		if (linkspeed == 100)
+			printf("%9u/%9upps, %6.2f%%\n", rfc2544_work[i].curpps, rfc2544_work[i].limitpps,
+			    rfc2544_work[i].curpps * 100.0 / rfc2544_work[i].limitpps);
+		else if (linkspeed == 10)
 			printf("%8u/%8upps, %6.2f%%\n", rfc2544_work[i].curpps, rfc2544_work[i].limitpps,
 			    rfc2544_work[i].curpps * 100.0 / rfc2544_work[i].limitpps);
 		else
@@ -3574,8 +3589,10 @@ main(int argc, char *argv[])
 		for (i = 0; i < 2; i++)
 			if (interface[i].maxlinkspeed == LINKSPEED_1GBPS)
 				pps = 1488095;
-			else
+			else if (interface[i].maxlinkspeed == LINKSPEED_10GBPS)
 				pps = 14880952;
+			else
+				pps = 148809524;
 	}
 
 	maxlinkspeed = 0;
